@@ -1,8 +1,6 @@
 ### Cities Cities Cities Cities Complexity Science Cities
 Patrick Huston, Meg McCauley, Andrew Pan | Fall 2016
 
-### Cities Cities Cities Cities (Complexity Science Cities)
-Patrick Huston, Meg McCauley, Andrew Pan | Fall 2016
 #### Abstract
 We are planning on investigating how city development and pedestrian traffic levels interact as the population of a city changes. We are going to use agent-based models to represent the individual citizens and create rules for their movement (or lack thereof) based on environmental and other variables that apply to the entire canvas of the city, updating the agents’ respective information with each step.
 #### Annotated Bibliography
@@ -26,9 +24,9 @@ We are planning on investigating how city development and pedestrian traffic lev
 
 #### Possible Results
 1. This is the punchline graph from “A Spatial Agent-Based Model for the Simulation of Adults’ Daily Walking Within a City.” 
-!["A Spatial Agent-Based Model..." punchline graph](link here "A Spatial Agent-Based Model..." punchline graph")
+!["A Spatial Agent-Based Model..." punchline graph](https://github.com/phuston/ComplexityFinalProject/blob/master/images/punchline_agent_based_walking.png "A Spatial Agent-Based Model..." punchline graph")
 After we implement our extension of allowing the starting and ending locations to exist outside of the agents’ home and work locations, our graphs would not separate along the lines of work, basic needs, and leisure so easily. Rather, it might make more sense to graph the amount of time spent or the distance walked between activities to get a more comprehensive look at how the agents are using their time and resources. A pie graph that demonstrates how much of their walking time the agents spend walking to or from one activity would also be useful. This could have separate sections for each of the three current options and then a fourth combined section to determine when the agents are both walking home from work and walking to the grocery store to fulfill a basic need. This graph could look something like this: 
-![Possible result pie graph](link here "Possible result pie graph")
+![Possible result pie graph](https://github.com/phuston/ComplexityFinalProject/blob/master/images/possible_results_pie_graph.png "Possible result pie graph")
 
 
 2. The results from “Spatial configurations in a periurban city…” did not represent the model in an easily-plottable manner, but when we run our simplified version we plan to plot the average utility rating as a function of time.  We can expect the slope of the resulting plot to be negative, but until we conduct our simulation we do not have enough information to create a sketch of the general trend of utility ratings.
