@@ -24,14 +24,25 @@ We are planning on investigating how city development and pedestrian traffic lev
 
 #### Possible Results
 1. This is the punchline graph from “A Spatial Agent-Based Model for the Simulation of Adults’ Daily Walking Within a City.” 
+
 !["A Spatial Agent-Based Model..." punchline graph](https://github.com/phuston/ComplexityFinalProject/blob/master/images/punchline_agent_based_walking.png "A Spatial Agent-Based Model..." punchline graph")
+
 After we implement our extension of allowing the starting and ending locations to exist outside of the agents’ home and work locations, our graphs would not separate along the lines of work, basic needs, and leisure so easily. Rather, it might make more sense to graph the amount of time spent or the distance walked between activities to get a more comprehensive look at how the agents are using their time and resources. A pie graph that demonstrates how much of their walking time the agents spend walking to or from one activity would also be useful. This could have separate sections for each of the three current options and then a fourth combined section to determine when the agents are both walking home from work and walking to the grocery store to fulfill a basic need. This graph could look something like this: 
+
 ![Possible result pie graph](https://github.com/phuston/ComplexityFinalProject/blob/master/images/possible_results_pie_graph.png "Possible result pie graph")
 
 
 2. The results from “Spatial configurations in a periurban city…” did not represent the model in an easily-plottable manner, but when we run our simplified version we plan to plot the average utility rating as a function of time.  We can expect the slope of the resulting plot to be negative, but until we conduct our simulation we do not have enough information to create a sketch of the general trend of utility ratings.
+
 #### Learning Goals
+
 ##### Meg
+
 My learning goal for the second half of the semester is to become more familiar with one of the models that we have covered in class. I am most interested in learning more about cellular automatons or agent-based models. I want to be able to implement one of these models in a more “from scratch” way so that I can have a deeper understanding of everything that goes into implementing such a model. This project will help me achieve this learning goal by giving me a hands-on experience writing code about an agent-based modeling system. By iterating and experimenting on the base implementations provided from the papers we have read, I will be able to adjust each of the parameters from the bottom up, allowing me to have a more complete understanding of what the behavior of the model will look like when it is implemented.
 ##### Andrew
+
+My learning goal for the remainder of the class is to create an agent-based model that involves a simulation of some sort of social interaction.  Our project is focused on the dynamics of a city’s structure and multiple parameters of the residents of the city, and by recreating models from the papers we read as research for this project I will gain experience in both designing and implementing an agent-based model.  I haven’t created an agent-based model completely from the ground up before, so being able to practice through recreating experiments and actually determining what aspects to model as design decisions would be a substantial learning experience.
+
 ##### Patrick
+
+My learning goals for the second half of the semester is to work on a project that investigates and explores something new and useful. To achieve this, I plan on being diligent in researching the work that has been done in the area we’re working in, and making sure that we’re not just spending the entire semester replicating existing results in a boring way. Along these lines, I’d like to get better at quickly scanning and analyzing research papers - getting to the punchline of ‘why does this matter’ and ‘is this legit’ in a short amount of time. If the results are compelling, I want to get better at being able to look at the implementation described, and get a good idea of how I could recreate a similar model, and make intelligent and reasoned decisions about whether it makes sense to replicate at all. 
