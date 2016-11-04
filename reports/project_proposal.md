@@ -1,4 +1,4 @@
-### Cities Cities Cities Cities Complexity Science Cities
+### Complexity Cities
 Patrick Huston, Meg McCauley, Andrew Pan | Fall 2016
 
 #### Abstract
