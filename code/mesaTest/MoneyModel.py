@@ -63,51 +63,52 @@ class MoneyModel(Model):
     def step(self):
         self.datacollector.collect(self)
         self.schedule.step()
-        
+     
+if __name__ == "__main__":   
 
-model = MoneyModel(50, 10, 10)
-for i in range(100):
-    model.step()
+    model = MoneyModel(50, 10, 10)
+    for i in range(100):
+        model.step()
 
-# Show a 2x2 grid where colors show number of agents present in each square
-import numpy as np
-agent_counts = np.zeros((model.grid.width, model.grid.height))
-for cell in model.grid.coord_iter():
-    cell_content, x, y = cell
-    agent_count = len(cell_content)
-    agent_counts[x][y]= agent_count
-plt.imshow(agent_counts, interpolation="nearest")
-plt.colorbar()
+    # Show a 2x2 grid where colors show number of agents present in each square
+    import numpy as np
+    agent_counts = np.zeros((model.grid.width, model.grid.height))
+    for cell in model.grid.coord_iter():
+        cell_content, x, y = cell
+        agent_count = len(cell_content)
+        agent_counts[x][y]= agent_count
+    plt.imshow(agent_counts, interpolation="nearest")
+    plt.colorbar()
 
-# Show the Gini Wealth Distribution
-gini = model.datacollector.get_model_vars_dataframe()
-gini.plot()
-plt.show()
+    # Show the Gini Wealth Distribution
+    gini = model.datacollector.get_model_vars_dataframe()
+    gini.plot()
+    plt.show()
 
-# Show all agents wealth as a histogram
-agent_wealth = model.datacollector.get_agent_vars_dataframe()
-agent_wealth.head()
-end_wealth = agent_wealth.xs(99, level="Step")["Wealth"]
-end_wealth.hist(bins=range(agent_wealth.Wealth.max()+1))
-plt.show()
+    # Show all agents wealth as a histogram
+    agent_wealth = model.datacollector.get_agent_vars_dataframe()
+    agent_wealth.head()
+    end_wealth = agent_wealth.xs(99, level="Step")["Wealth"]
+    end_wealth.hist(bins=range(agent_wealth.Wealth.max()+1))
+    plt.show()
 
-# Show a single agent's wealth over each time step
-one_agent_wealth = agent_wealth.xs(14, level="AgentID")
-one_agent_wealth.Wealth.plot()
-plt.show()
+    # Show a single agent's wealth over each time step
+    one_agent_wealth = agent_wealth.xs(14, level="AgentID")
+    one_agent_wealth.Wealth.plot()
+    plt.show()
 
-# Use BatchRunner to run multiple instantiations at the same time
-parameters = {"width" : 10,
-                "height" : 10,
-                "N": range(10, 500, 10)}
-batch_run = BatchRunner(MoneyModel,
-                        parameters,
-                        iterations=5,
-                        max_steps=100,
-                        model_reporters={"Gini": compute_gini})
-batch_run_all()
-# show BatchRunner data as a scatter plot
-run_data = batch_run.get_model_vars_dataframe()
-run_data.head()
-plt.scatter(run_data.N, run_data.Gini)
-plt.show()
+    # Use BatchRunner to run multiple instantiations at the same time
+    parameters = {"width" : 10,
+                    "height" : 10,
+                    "N": range(10, 500, 10)}
+    batch_run = BatchRunner(MoneyModel,
+                            parameters,
+                            iterations=5,
+                            max_steps=100,
+                            model_reporters={"Gini": compute_gini})
+    # batch_run_all()
+    # show BatchRunner data as a scatter plot
+    run_data = batch_run.get_model_vars_dataframe()
+    run_data.head()
+    plt.scatter(run_data.N, run_data.Gini)
+    plt.show()
