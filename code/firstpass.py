@@ -29,6 +29,7 @@ class WalkingModel(Model):
 		self.schedule = RandomActivation(self)
 		self.grid = MultiGrid(width, height, True)
 		self.running = True
+		self.allAgents = []
 		
 		# create a grid with travel(grocery, social areas), home, and work locations
 		# self.allLocations = {}
@@ -48,6 +49,7 @@ class WalkingModel(Model):
 			agent = WalkingAgent(i, self, self.homeLocs[i], random.choice(self.workLocs))
 			self.schedule.add(agent)
 			self.grid.place_agent(agent, agent.home)
+			self.allAgents.append(agent)
 
 		## displaying how many of each location there are
 		# homeCount = len(self.homeLocs)
@@ -55,17 +57,34 @@ class WalkingModel(Model):
 		# travelCount = len(self.travelLocs)
 		# print(homeCount, workCount, travelCount)
 
+	def getWorkLocs(self):
+		return self.workLocs
 
-if __name__ == "__main__":		
+	def getHomeLocs(self):
+		return self.homeLocs
+
+if __name__ == "__main__":
+	import numpy as np		
 	# place agents in home locations
 	model = WalkingModel(50, 10, 10)
 
-	import numpy as np
-	agent_counts = np.zeros((model.grid.width, model.grid.height))
-	for cell in model.grid.coord_iter():
-		cell_content, x, y = cell
-		agent_count = len(cell_content)
-		agent_counts[x][y]= agent_count
-	plt.imshow(agent_counts, interpolation="nearest")
+	workLocation_grid = np.zeros((model.grid.width, model.grid.height))
+	for agent in model.allAgents:
+		print(agent.home)
+		workLocation_grid[agent.work[0]][agent.work[1]] += 1
+	print (workLocation_grid)
+	plt.imshow(workLocation_grid, interpolation="nearest")
 	plt.colorbar()
 	plt.show()
+
+	# import numpy as np
+	# agent_counts = np.zeros((model.grid.width, model.grid.height))
+	# for cell in model.grid.coord_iter():
+	# 	cell_content, x , y = cell      
+	# 	agent_count = len(cell_content)      
+	# 	agent_counts[x][y] = agent_count
+	# 	# print(cell_content)
+	# plt.imshow(agent_counts, interpolation="nearest")
+	# plt.colorbar()
+	# plt.show()
+	# this is a test 
