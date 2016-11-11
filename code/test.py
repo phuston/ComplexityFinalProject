@@ -70,3 +70,4 @@ for cell in model.grid.coord_iter():
 plt.imshow(agent_counts, interpolation="nearest")
 plt.colorbar()
 plt.show()
+##HELLOOOOOOoooooooasdfadsf
