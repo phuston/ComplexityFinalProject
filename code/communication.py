@@ -61,6 +61,27 @@ class CommunicationAgent(Agent):
     def reset_scores(self):
         self.scores = []
 
+    def choose_action(self):
+        # If decision is already made, return 0
+        if decision:
+            return 0
+        # Check to see if current state leads to a decision
+        else if (self.action_map[self.state] == COOPERATE) or (self.action_map[self.state] == DEFECT):
+            self.decision = self.action_map[self.state]
+            return 0
+        # Else, return token specified by current state
+        else:
+            return self.action_map[self.state]
+            
+    def handle_token(self, token):
+        #takes in receiving token and selects next state
+        # If a decision hasn't been made, we move to the next state
+        if (self.decision != None):
+            self.set_state(self.transition_table[(self.state, token)])
+    
+    def reset_scores(self):
+        self.scores = []
+
     def get_state(self):
         return self.state
         
@@ -98,7 +119,7 @@ class CommunicationModel(Model):
     def step(self):
         # self.schedule.step()
         pass
-        
+
         #reset all agents' automata to state 1 and score to 0
         #play all agents against each other
         #agent keeps track of its score
@@ -141,7 +162,7 @@ class CommunicationModel(Model):
             
             agent1.handle_token(agent2_token)
             agent2.handle_token(agent1_token)
-            
+
             chat_count += 1
 
         agent1.scores.append(agent1_score)
