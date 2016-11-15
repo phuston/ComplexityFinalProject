@@ -1,5 +1,7 @@
-import random
-
+import random, copy
+from tqdm import tqdm
+import numpy as np
+import matplotlib.pyplot as plt
 from mesa import Agent, Model
 from mesa.time import RandomActivation
 from mesa.space import MultiGrid
@@ -38,11 +40,6 @@ class CommunicationAgent(Agent):
         self.transition_table = dict.fromkeys([(state, received_token) for state in range(fsm_size) for received_token in range(num_tokens)])
         for pair in self.transition_table.keys():
             self.transition_table[pair] = random.randrange(fsm_size)
-            
-        print ('ACTION')
-        print(self.action_map)
-        print ('TRANSITION')
-        print(self.transition_table)
 
     def choose_action(self):
         # If decision is already made, return 0
@@ -88,6 +85,13 @@ class CommunicationModel(Model):
         self.fsm_size = fsm_size
         self.num_tokens = num_tokens
         
+        self.total_cooperations = []
+        self.total_defections = []
+        self.single_gen_cooperations = 0
+        self.single_gen_defections = 0
+        self.total_chats = []
+        self.single_gen_chats = []
+        
         self.agents = []
         
         for i in range(self.num_agents):
@@ -102,11 +106,18 @@ class CommunicationModel(Model):
         self.selection()
     
     def selection(self):
+        self.single_gen_cooperations = 0
+        self.single_gen_defections = 0
+        self.single_gen_chats = []
+        
         #choose two agents to PLAY
         for agent1 in self.agents:
             for agent2 in self.agents:
                 if agent1 != agent2:
                     self.play(agent1, agent2)
+        self.total_cooperations.append(self.single_gen_cooperations)
+        self.total_defections.append(self.single_gen_defections)
+        self.total_chats.append(np.mean(self.single_gen_chats))
         #better average scoring agent is placed into the new pool with a 50% probability that it will be mutated
             #if it is mutated, 1) 50% chance that a random action_map state is changed (using the same 50/50 in gen_automata)
                 #or 2) 50% chance that a random transition_map state is changed
@@ -117,7 +128,6 @@ class CommunicationModel(Model):
             agent2 = random.choice(self.agents)
             while(agent1 == agent2):
                 agent2 = random.choice(self.agents)
-                break
             better_agent = agent1 if sum(agent1.scores) > sum(agent2.scores) else agent2
             
             if random.random() < .5: # roll for whether or not to mutate
@@ -128,7 +138,7 @@ class CommunicationModel(Model):
                         better_agent.action_map[random.randrange(self.fsm_size)] = random.choice([COOPERATE, DEFECT])
                 else:
                     better_agent.transition_table[random.choice(list(better_agent.transition_table.keys()))] = random.randrange(self.fsm_size)
-            new_population.append(better_agent)
+            new_population.append(copy.deepcopy(better_agent))
         self.agents = new_population
 
     def play(self, agent1, agent2):
@@ -137,18 +147,22 @@ class CommunicationModel(Model):
             #still talking
             agent1_token = agent1.choose_action()
             agent2_token = agent2.choose_action()
-
+            
+            if (agent1_token == 0 and agent2_token == 0):
+                break
+            
             agent1.handle_token(agent2_token)
             agent2.handle_token(agent1_token)
             
             chat_count += 1
-            
+        self.single_gen_chats.append(chat_count)
         agent1_score, agent2_score = payout[(agent1.decision, agent2.decision)]
-        
+        if agent1.decision == COOPERATE and agent2.decision == COOPERATE:
+            self.single_gen_cooperations += 1
+        elif agent1.decision == DEFECT or agent2.decision == DEFECT:
+            self.single_gen_defections += 1
         agent1.scores.append(agent1_score)
         agent2.scores.append(agent2_score)
-        print(agent1.scores)
-        print(agent2.scores)
         # return score of agents as a tuple (agent1_score, agent2_score)
     
     def reset_agents(self):
@@ -157,6 +171,23 @@ class CommunicationModel(Model):
 
 
 if __name__ == '__main__':
-    communicationModel = CommunicationModel(3, 3, 3, 3)
-    for i in range(50):
+    communicationModel = CommunicationModel(50, 10, 3, 3)
+    for i in tqdm(range(100)):
         communicationModel.step()
+    for agent in communicationModel.agents:
+        print(np.mean(agent.scores))
+    print('Cooperations array')
+    print(communicationModel.total_cooperations)
+    plt.plot(communicationModel.total_cooperations)
+    plt.title('Cooperations')
+    plt.show()
+    print('Defections array')
+    print(communicationModel.total_defections)
+    plt.plot(communicationModel.total_defections)
+    plt.title('Defections')
+    plt.show()
+    print('Communications array')
+    print(communicationModel.total_chats)
+    plt.plot(communicationModel.total_chats)
+    plt.title('Chats')
+    plt.show()
