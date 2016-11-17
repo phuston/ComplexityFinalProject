@@ -1,4 +1,4 @@
-import random, copy
+import random, copy, itertools
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
@@ -91,6 +91,11 @@ class CommunicationModel(Model):
         self.single_gen_defections = 0
         self.total_chats = []
         self.single_gen_chats = []
+        self.total_proportions = []
+        self.single_gen_transition_mutations = 0
+        self.total_transition_muations = []
+        self.single_gen_action_mutations = 0
+        self.total_action_muations = []
         
         self.agents = []
         
@@ -109,15 +114,25 @@ class CommunicationModel(Model):
         self.single_gen_cooperations = 0
         self.single_gen_defections = 0
         self.single_gen_chats = []
+        self.single_gen_transition_mutations = 0
+        self.single_gen_action_mutations = 0
+
+        pairings = list(itertools.combinations(self.agents, 2))
+        for pair in pairings:
+            self.play(pair[0], pair[1])
+        # pairings = Set
         
         #choose two agents to PLAY
-        for agent1 in self.agents:
-            for agent2 in self.agents:
-                if agent1 != agent2:
-                    self.play(agent1, agent2)
+        # for agent1 in self.agents:
+        #     for agent2 in self.agents:
+        #         if agent1 != agent2:
+        #             self.play(agent1, agent2)
+        
         self.total_cooperations.append(self.single_gen_cooperations)
         self.total_defections.append(self.single_gen_defections)
         self.total_chats.append(np.mean(self.single_gen_chats))
+        self.total_proportions.append(self.single_gen_cooperations / self.single_gen_defections)
+        
         #better average scoring agent is placed into the new pool with a 50% probability that it will be mutated
             #if it is mutated, 1) 50% chance that a random action_map state is changed (using the same 50/50 in gen_automata)
                 #or 2) 50% chance that a random transition_map state is changed
@@ -132,13 +147,21 @@ class CommunicationModel(Model):
             
             if random.random() < .5: # roll for whether or not to mutate
                 if random.random() < .5: # roll for mutation type (change action map vs transition table)
+                    self.single_gen_action_mutations += 1
                     if random.random() < .5: # roll for how to set new action map value (same as in agent's gen_automata function)
                         better_agent.action_map[random.randrange(self.fsm_size)] = random.randint(1, self.num_tokens - 1)
                     else: 
                         better_agent.action_map[random.randrange(self.fsm_size)] = random.choice([COOPERATE, DEFECT])
                 else:
+                    self.single_gen_transition_mutations += 1
                     better_agent.transition_table[random.choice(list(better_agent.transition_table.keys()))] = random.randrange(self.fsm_size)
-            new_population.append(copy.deepcopy(better_agent))
+            new_agent = CommunicationAgent(better_agent.unique_id, self, self.fsm_size, self.num_tokens)
+            new_agent.transition_table = copy.copy(better_agent.transition_table)
+            new_agent.action_map = copy.copy(better_agent.action_map)
+            new_population.append(new_agent)
+            # new_population.append(copy.deepcopy(better_agent))
+        self.total_transition_muations.append(self.single_gen_transition_mutations)
+        self.total_action_muations.append(self.single_gen_action_mutations)
         self.agents = new_population
 
     def play(self, agent1, agent2):
@@ -171,23 +194,38 @@ class CommunicationModel(Model):
 
 
 if __name__ == '__main__':
-    communicationModel = CommunicationModel(50, 10, 3, 3)
-    for i in tqdm(range(100)):
+    communicationModel = CommunicationModel(50, 10, 4, 2)
+    for i in tqdm(range(10000)):
         communicationModel.step()
     for agent in communicationModel.agents:
         print(np.mean(agent.scores))
-    print('Cooperations array')
-    print(communicationModel.total_cooperations)
-    plt.plot(communicationModel.total_cooperations)
-    plt.title('Cooperations')
+    # print('Cooperations array')
+    # print(communicationModel.total_cooperations)
+    # plt.plot(communicationModel.total_cooperations)
+    # plt.title('Cooperations')
+    # plt.show()
+    # print('Defections array')
+    # print(communicationModel.total_defections)
+    # plt.plot(communicationModel.total_defections)
+    # plt.title('Defections')
+    # plt.show()
+
+    print('Proportions array')
+    print(communicationModel.total_proportions)
+    plt.plot(communicationModel.total_proportions)
+    plt.title('Proportion of cooperate / defect')
     plt.show()
-    print('Defections array')
-    print(communicationModel.total_defections)
-    plt.plot(communicationModel.total_defections)
-    plt.title('Defections')
-    plt.show()
+
     print('Communications array')
     print(communicationModel.total_chats)
     plt.plot(communicationModel.total_chats)
     plt.title('Chats')
+    plt.show()
+    
+    plt.plot(communicationModel.total_action_muations)
+    plt.title('Action map mutations')
+    plt.show()
+    
+    plt.plot(communicationModel.total_transition_muations)
+    plt.title('Transition table mutations')
     plt.show()
