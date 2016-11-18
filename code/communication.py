@@ -10,7 +10,7 @@ from mesa.space import MultiGrid
 COOPERATE = -1
 DEFECT = -2
 NO_ACTION = -3
-payout = {(COOPERATE,COOPERATE):(3,3), (COOPERATE,DEFECT):(0,5), (COOPERATE,NO_ACTION):(2,-5), (COOPERATE,NO_ACTION):(2,-5), (DEFECT,COOPERATE):(5,0), (DEFECT,DEFECT):(1,1), (DEFECT,NO_ACTION):(2,-5), (NO_ACTION,NO_ACTION):(-5,-5), (NO_ACTION,COOPERATE):(-5,2), (NO_ACTION,DEFECT):(-5,2)}
+payout = {(COOPERATE,COOPERATE):(5,5), (COOPERATE,DEFECT):(0,5), (COOPERATE,NO_ACTION):(2,-5), (COOPERATE,NO_ACTION):(2,-5), (DEFECT,COOPERATE):(5,0), (DEFECT,DEFECT):(1,1), (DEFECT,NO_ACTION):(2,-5), (NO_ACTION,NO_ACTION):(-5,-5), (NO_ACTION,COOPERATE):(-5,2), (NO_ACTION,DEFECT):(-5,2)}
 
     
 class CommunicationAgent(Agent):
@@ -31,7 +31,7 @@ class CommunicationAgent(Agent):
         self.action_map = {}
         for state in range(fsm_size):
             flip = random.random()
-            if (flip < 0.5):
+            if (flip < 0.8):
                 self.action_map[state] = random.randint(1, num_tokens-1)
             else: 
                 self.action_map[state] = random.choice([COOPERATE, DEFECT])
@@ -56,7 +56,7 @@ class CommunicationAgent(Agent):
     def handle_token(self, token):
         #takes in receiving token and selects next state
         # If a decision hasn't been made, we move to the next state
-        if (self.decision != None):
+        if (self.decision != NO_ACTION):
             self.set_state(self.transition_table[(self.state, token)])
     
     def reset(self):
@@ -131,7 +131,7 @@ class CommunicationModel(Model):
         self.total_cooperations.append(self.single_gen_cooperations)
         self.total_defections.append(self.single_gen_defections)
         self.total_chats.append(np.mean(self.single_gen_chats))
-        self.total_proportions.append(self.single_gen_cooperations / self.single_gen_defections)
+        self.total_proportions.append(self.single_gen_cooperations / (self.single_gen_defections + self.single_gen_cooperations))
         
         #better average scoring agent is placed into the new pool with a 50% probability that it will be mutated
             #if it is mutated, 1) 50% chance that a random action_map state is changed (using the same 50/50 in gen_automata)
@@ -148,7 +148,7 @@ class CommunicationModel(Model):
             if random.random() < .5: # roll for whether or not to mutate
                 if random.random() < .5: # roll for mutation type (change action map vs transition table)
                     self.single_gen_action_mutations += 1
-                    if random.random() < .5: # roll for how to set new action map value (same as in agent's gen_automata function)
+                    if random.random() < .8: # roll for how to set new action map value (same as in agent's gen_automata function)
                         better_agent.action_map[random.randrange(self.fsm_size)] = random.randint(1, self.num_tokens - 1)
                     else: 
                         better_agent.action_map[random.randrange(self.fsm_size)] = random.choice([COOPERATE, DEFECT])
@@ -194,8 +194,8 @@ class CommunicationModel(Model):
 
 
 if __name__ == '__main__':
-    communicationModel = CommunicationModel(50, 10, 4, 2)
-    for i in tqdm(range(10000)):
+    communicationModel = CommunicationModel(50, 4, 4, 2)
+    for i in tqdm(range(5000)):
         communicationModel.step()
     for agent in communicationModel.agents:
         print(np.mean(agent.scores))
@@ -213,7 +213,7 @@ if __name__ == '__main__':
     print('Proportions array')
     print(communicationModel.total_proportions)
     plt.plot(communicationModel.total_proportions)
-    plt.title('Proportion of cooperate / defect')
+    plt.title('Proportion of mutual cooperations')
     plt.show()
 
     print('Communications array')
