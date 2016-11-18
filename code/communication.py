@@ -10,7 +10,7 @@ from mesa.space import MultiGrid
 COOPERATE = -1
 DEFECT = -2
 NO_ACTION = -3
-payout = {(COOPERATE,COOPERATE):(3,3), (COOPERATE,DEFECT):(0,5), (COOPERATE,NO_ACTION):(2,-5), (COOPERATE,NO_ACTION):(2,-5), (DEFECT,COOPERATE):(5,0), (DEFECT,DEFECT):(1,1), (DEFECT,NO_ACTION):(2,-5), (NO_ACTION,NO_ACTION):(-5,-5), (NO_ACTION,COOPERATE):(-5,2), (NO_ACTION,DEFECT):(-5,2)}
+payout = {(COOPERATE,COOPERATE):(3,3), (COOPERATE,DEFECT):(1,5), (COOPERATE,NO_ACTION):(2,-5), (COOPERATE,NO_ACTION):(2,-5), (DEFECT,COOPERATE):(5,1), (DEFECT,DEFECT):(1,1), (DEFECT,NO_ACTION):(2,-5), (NO_ACTION,NO_ACTION):(-5,-5), (NO_ACTION,COOPERATE):(-5,2), (NO_ACTION,DEFECT):(-5,2)}
 
     
 class CommunicationAgent(Agent):
@@ -37,13 +37,17 @@ class CommunicationAgent(Agent):
                 self.action_map[state] = random.choice([COOPERATE, DEFECT])
 
         #map from tuple (current state, received communication) to the next state
-        self.transition_table = dict.fromkeys([(state, received_token) for state in range(fsm_size) for received_token in range(num_tokens)])
-        for pair in self.transition_table.keys():
+        self.transition_table = {}
+        states = range(fsm_size)
+        tokens = range(num_tokens)
+
+        state_token_pairs = itertools.product(states, tokens)
+        for pair in state_token_pairs:
             self.transition_table[pair] = random.randrange(fsm_size)
 
     def choose_action(self):
         # If decision is already made, return 0
-        if (self.decision == COOPERATE) or (self.decision == DEFECT):
+        if (self.decision != NO_ACTION):
             return 0
         # Check to see if current state leads to a decision
         elif(self.action_map[self.state] == COOPERATE) or (self.action_map[self.state] == DEFECT):
@@ -56,7 +60,7 @@ class CommunicationAgent(Agent):
     def handle_token(self, token):
         #takes in receiving token and selects next state
         # If a decision hasn't been made, we move to the next state
-        if (self.decision != None):
+        if (self.decision != NO_ACTION):
             self.set_state(self.transition_table[(self.state, token)])
     
     def reset(self):
@@ -77,9 +81,6 @@ class CommunicationModel(Model):
     
     def __init__(self, N, max_chat, fsm_size, num_tokens):      #fsm_size is number of states, num_tokens is complexity of language
         
-        # TODO: Create agents
-        # TODO: take in params - max_chat, fsm_size, num_tokens
-        
         self.num_agents = N
         self.max_chat = max_chat
         self.fsm_size = fsm_size
@@ -91,11 +92,8 @@ class CommunicationModel(Model):
         self.single_gen_defections = 0
         self.total_chats = []
         self.single_gen_chats = []
-        self.total_proportions = []
-        self.single_gen_transition_mutations = 0
-        self.total_transition_muations = []
-        self.single_gen_action_mutations = 0
-        self.total_action_muations = []
+        self.total_proportions_cooperate = []
+        self.total_proportion_defect = []
         
         self.agents = []
         
@@ -113,25 +111,22 @@ class CommunicationModel(Model):
     def selection(self):
         self.single_gen_cooperations = 0
         self.single_gen_defections = 0
+        self.single_gen_no_actions = 0
         self.single_gen_chats = []
-        self.single_gen_transition_mutations = 0
-        self.single_gen_action_mutations = 0
+
 
         pairings = list(itertools.combinations(self.agents, 2))
+        num_games = len(pairings)
         for pair in pairings:
+
             self.play(pair[0], pair[1])
-        # pairings = Set
-        
-        #choose two agents to PLAY
-        # for agent1 in self.agents:
-        #     for agent2 in self.agents:
-        #         if agent1 != agent2:
-        #             self.play(agent1, agent2)
         
         self.total_cooperations.append(self.single_gen_cooperations)
         self.total_defections.append(self.single_gen_defections)
         self.total_chats.append(np.mean(self.single_gen_chats))
-        self.total_proportions.append(self.single_gen_cooperations / self.single_gen_defections)
+        # print(self.single_gen_defections+self.single_gen_cooperations)
+        self.total_proportions_cooperate.append(self.single_gen_cooperations / num_games)
+        self.total_proportion_defect.append(self.single_gen_defections / num_games)
         
         #better average scoring agent is placed into the new pool with a 50% probability that it will be mutated
             #if it is mutated, 1) 50% chance that a random action_map state is changed (using the same 50/50 in gen_automata)
@@ -143,25 +138,23 @@ class CommunicationModel(Model):
             agent2 = random.choice(self.agents)
             while(agent1 == agent2):
                 agent2 = random.choice(self.agents)
-            better_agent = agent1 if sum(agent1.scores) > sum(agent2.scores) else agent2
+            better_agent = agent1 if np.mean(agent1.scores) > np.mean(agent2.scores) else agent2
+
+            new_action_map = copy.deepcopy(better_agent.action_map)
+            new_transition_table = copy.deepcopy(better_agent.transition_table)
             
             if random.random() < .5: # roll for whether or not to mutate
                 if random.random() < .5: # roll for mutation type (change action map vs transition table)
-                    self.single_gen_action_mutations += 1
                     if random.random() < .5: # roll for how to set new action map value (same as in agent's gen_automata function)
-                        better_agent.action_map[random.randrange(self.fsm_size)] = random.randint(1, self.num_tokens - 1)
+                        new_action_map[random.randrange(self.fsm_size)] = random.randint(1, self.num_tokens - 1)
                     else: 
-                        better_agent.action_map[random.randrange(self.fsm_size)] = random.choice([COOPERATE, DEFECT])
+                        new_action_map[random.randrange(self.fsm_size)] = random.choice([COOPERATE, DEFECT])
                 else:
-                    self.single_gen_transition_mutations += 1
                     better_agent.transition_table[random.choice(list(better_agent.transition_table.keys()))] = random.randrange(self.fsm_size)
             new_agent = CommunicationAgent(better_agent.unique_id, self, self.fsm_size, self.num_tokens)
-            new_agent.transition_table = copy.copy(better_agent.transition_table)
-            new_agent.action_map = copy.copy(better_agent.action_map)
+            new_agent.transition_table = new_transition_table
+            new_agent.action_map = new_action_map
             new_population.append(new_agent)
-            # new_population.append(copy.deepcopy(better_agent))
-        self.total_transition_muations.append(self.single_gen_transition_mutations)
-        self.total_action_muations.append(self.single_gen_action_mutations)
         self.agents = new_population
 
     def play(self, agent1, agent2):
@@ -180,10 +173,15 @@ class CommunicationModel(Model):
             chat_count += 1
         self.single_gen_chats.append(chat_count)
         agent1_score, agent2_score = payout[(agent1.decision, agent2.decision)]
+        scores = payout[(agent1.decision, agent2.decision)]
+        # print("Agent 1: {} Agent 2: {}  |  Scores: {} {} ".format(agent1.decision, agent2.decision, scores[0], scores[1])) 
         if agent1.decision == COOPERATE and agent2.decision == COOPERATE:
             self.single_gen_cooperations += 1
-        elif agent1.decision == DEFECT or agent2.decision == DEFECT:
+        elif agent1.decision == DEFECT and agent2.decision == DEFECT:
             self.single_gen_defections += 1
+        elif agent1.decision == NO_ACTION or agent2.decision == NO_ACTION:
+            self.single_gen_no_actions +=1
+
         agent1.scores.append(agent1_score)
         agent2.scores.append(agent2_score)
         # return score of agents as a tuple (agent1_score, agent2_score)
@@ -195,10 +193,11 @@ class CommunicationModel(Model):
 
 if __name__ == '__main__':
     communicationModel = CommunicationModel(50, 10, 4, 2)
-    for i in tqdm(range(10000)):
+    for i in tqdm(range(1000)):
         communicationModel.step()
-    for agent in communicationModel.agents:
-        print(np.mean(agent.scores))
+
+    # for agent in communicationModel.agents:
+        # print(np.mean(agent.scores))
     # print('Cooperations array')
     # print(communicationModel.total_cooperations)
     # plt.plot(communicationModel.total_cooperations)
@@ -210,22 +209,16 @@ if __name__ == '__main__':
     # plt.title('Defections')
     # plt.show()
 
-    print('Proportions array')
-    print(communicationModel.total_proportions)
-    plt.plot(communicationModel.total_proportions)
+    # print('Proportions array')
+    # print(communicationModel.total_proportions)
+    plt.subplot(2, 1, 1)
+    plt.plot(communicationModel.total_proportions_cooperate)
+    # plt.plot(communicationModel.total_proportion_defect)
     plt.title('Proportion of cooperate / defect')
-    plt.show()
 
-    print('Communications array')
-    print(communicationModel.total_chats)
+    # print('Communications array')
+    # print(communicationModel.total_chats)
+    plt.subplot(2, 1, 2)
     plt.plot(communicationModel.total_chats)
     plt.title('Chats')
-    plt.show()
-    
-    plt.plot(communicationModel.total_action_muations)
-    plt.title('Action map mutations')
-    plt.show()
-    
-    plt.plot(communicationModel.total_transition_muations)
-    plt.title('Transition table mutations')
     plt.show()
