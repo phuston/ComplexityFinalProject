@@ -10,7 +10,7 @@ from mesa.space import MultiGrid
 COOPERATE = -1
 DEFECT = -2
 NO_ACTION = -3
-payout = {(COOPERATE,COOPERATE):(3,3), (COOPERATE,DEFECT):(1,5), (COOPERATE,NO_ACTION):(2,-5), (COOPERATE,NO_ACTION):(2,-5), (DEFECT,COOPERATE):(5,1), (DEFECT,DEFECT):(1,1), (DEFECT,NO_ACTION):(2,-5), (NO_ACTION,NO_ACTION):(-5,-5), (NO_ACTION,COOPERATE):(-5,2), (NO_ACTION,DEFECT):(-5,2)}
+payout = {(COOPERATE,COOPERATE):(3,3), (COOPERATE,DEFECT):(0,5), (COOPERATE,NO_ACTION):(2,-5), (DEFECT,COOPERATE):(5,0), (DEFECT,DEFECT):(1,1), (DEFECT,NO_ACTION):(2,-5), (NO_ACTION,NO_ACTION):(-5,-5), (NO_ACTION,COOPERATE):(-5,2), (NO_ACTION,DEFECT):(-5,2)}
 
     
 class CommunicationAgent(Agent):
@@ -100,9 +100,6 @@ class CommunicationModel(Model):
         for i in range(self.num_agents):
             agent = CommunicationAgent(i, self, fsm_size, num_tokens)
             self.agents.append(agent)
-
-    def run_one_round(self, agent1, agent2):
-        pass
  
     def step(self):
         self.reset_agents()
@@ -113,7 +110,6 @@ class CommunicationModel(Model):
         self.single_gen_defections = 0
         self.single_gen_no_actions = 0
         self.single_gen_chats = []
-
 
         pairings = list(itertools.combinations(self.agents, 2))
         num_games = len(pairings)
@@ -150,7 +146,7 @@ class CommunicationModel(Model):
                     else: 
                         new_action_map[random.randrange(self.fsm_size)] = random.choice([COOPERATE, DEFECT])
                 else:
-                    better_agent.transition_table[random.choice(list(better_agent.transition_table.keys()))] = random.randrange(self.fsm_size)
+                    new_transition_table[random.choice(list(new_transition_table.keys()))] = random.randrange(self.fsm_size)
             new_agent = CommunicationAgent(better_agent.unique_id, self, self.fsm_size, self.num_tokens)
             new_agent.transition_table = new_transition_table
             new_agent.action_map = new_action_map
@@ -192,7 +188,7 @@ class CommunicationModel(Model):
 
 
 if __name__ == '__main__':
-    communicationModel = CommunicationModel(50, 10, 4, 2)
+    communicationModel = CommunicationModel(50, 10, 4, 4)
     for i in tqdm(range(1000)):
         communicationModel.step()
 
