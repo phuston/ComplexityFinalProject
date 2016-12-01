@@ -8,6 +8,11 @@ from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 from mesa import Agent, Model
+# import logging
+
+# logging.basicConfig(filename='output.log',level=logging.DEBUG)
+# with open('output.log', 'w'):
+#     pass
 
 # Final actions
 COOPERATE = -1
@@ -48,7 +53,7 @@ class CommunicationAgent(Agent):
         self.action_map = {}
         for state in range(fsm_size):
             flip = random.random()
-            if (flip < 0.5):
+            if (flip < 0.5 or state == 0):
                 # .5 probability of choosing a token to send
                 self.action_map[state] = random.randint(1, num_tokens-1)
             else: 
@@ -92,7 +97,7 @@ class CommunicationAgent(Agent):
             token (int): token sent by opponent
         """
 
-        if (self.decision != NO_ACTION):
+        if (self.decision != COOPERATE and self.decision != DEFECT):
             self.set_state(self.transition_table[(self.state, token)])
     
     def reset(self):
@@ -184,12 +189,21 @@ class CommunicationModel(Model):
         Runs a tournament-style selection with replacement to generate a new population of agents
         Fitter of 2 agents selected has a 50% chance of mutation to either its action map or transition table
         """
-
+        
+        # logging.debug("GENERATING_POPULATION")
+        
         new_population = []
         for i in range(self.num_agents):
 
+            # logging.debug("Begin-Selection {}".format(i))
             agent1, agent2 = random.sample(self.agents, 2)
+            # logging.debug("Agent1 ID:    {}   Agent2 ID:    {}".format(agent1.unique_id, agent2.unique_id))
+            # logging.debug("Agent1 Score: {}   Agent2 Score: {}".format(np.mean(agent1.scores), np.mean(agent2.scores)))
+
             better_agent = agent1 if np.mean(agent1.scores) > np.mean(agent2.scores) else agent2
+            
+            # logging.debug("Winning Agent: {}".format(better_agent.unique_id))
+
 
             # Copy automata elements from better agent
             new_action_map = copy.deepcopy(better_agent.action_map)
@@ -200,21 +214,28 @@ class CommunicationModel(Model):
 
             if mutate_flip: # roll for whether or not to mutate
                 if mutate_action: # roll for mutation type (change action map vs transition table)
-                    if random.random() < .5: # Roll for how to set new action map value
-                        new_action_map[random.randrange(self.fsm_size)] = random.randint(1, self.num_tokens - 1)
+                    stateChoice = random.randrange(self.fsm_size)
+                    if random.random() < .5 or stateChoice == 0: # Roll for how to set new action map value
+                        new_action_map[stateChoice] = random.randint(1, self.num_tokens - 1)
                     else: 
-                        new_action_map[random.randrange(self.fsm_size)] = random.choice([COOPERATE, DEFECT])
+                        new_action_map[stateChoice] = random.choice([COOPERATE, DEFECT])
                 else:
                     new_transition_table[random.choice(list(new_transition_table.keys()))] = random.randrange(self.fsm_size)
             
             # Create new agent with better properties and set attributes
-            new_agent = CommunicationAgent(better_agent.unique_id, self, self.fsm_size, self.num_tokens)
+            # logging.debug('New Agent Transition Table: {}'.format(new_transition_table))
+            # logging.debug('New Agent Action Map: {}'.format(new_action_map))
+            new_agent = CommunicationAgent(i, self, self.fsm_size, self.num_tokens)
             new_agent.transition_table = new_transition_table
             new_agent.action_map = new_action_map
 
             new_population.append(new_agent)
+            # logging.debug("End-Selection {}\n".format(i))
+
 
         self.agents = new_population
+        
+        # logging.debug("END_GENERATION\n")
 
     def play(self, agent1, agent2):
         """ Plays two agents against each other in a single-shot prisoner's dilemma
@@ -225,7 +246,15 @@ class CommunicationModel(Model):
         """
 
         chat_length = 0
-
+        agent1.state = 0
+        agent1.decision = NO_ACTION
+        agent2.state = 0
+        agent2.decision = NO_ACTION
+        # logging.debug('COMMUNICATION START')
+        # logging.debug('Agent1 Transition Table: {}'.format(agent1.transition_table))
+        # logging.debug('Agent1 Action Map: {}\n'.format(agent1.action_map))
+        # logging.debug('Agent2 Transition Table: {}'.format(agent2.transition_table))
+        # logging.debug('Agent2 Action Map: {}\n'.format(agent2.action_map))
         while chat_length < self.max_chat_length:
 
             # Choose actions for agent1 and agent2
@@ -234,14 +263,16 @@ class CommunicationModel(Model):
             
             # Both agents have decided - break
             if (agent1_token == 0 and agent2_token == 0):
+                # logging.debug('Communication Finished\nAgent1 State: {} | Agent2 State: {}'.format(agent1.state, agent2.state))
                 break
             
+            # logging.debug('Agent1 State: {} Token Sent: {}   |   Agent2 State: {}  Token Sent: {}'.format(agent1.state, agent1_token, agent2.state, agent2_token))
             # Agents handle tokens 
             agent1.handle_token(agent2_token)
             agent2.handle_token(agent1_token)
-            
             chat_length += 1
-
+        # logging.debug('Chat length: {}'.format(chat_length))
+        # logging.debug('END COMMUNICATION\n')
         self.single_gen_chats.append(chat_length)
 
         # Compute scores using payout dictionaryff
@@ -265,6 +296,7 @@ class CommunicationModel(Model):
 if __name__ == '__main__':
     communicationModel = CommunicationModel(50, 10, 4, 4)
     for i in tqdm(range(1000)):
+        # logging.debug('Generation Number {}'.format(i))
         communicationModel.step()
 
     # Plot proportion of mutual cooperative games
