@@ -2,7 +2,6 @@
 
 __author__      = "Patrick Huston, Meg McCauley, Andrew Pan"
 
-
 import random, copy, itertools
 from tqdm import tqdm
 import numpy as np
@@ -122,7 +121,7 @@ class CommunicationModel(Model):
     Represents agent-based model investigated in 'Communication and Cooperation' - Miller, et. al
     """
     
-    def __init__(self, N, max_chat_length, fsm_size, num_tokens):
+    def __init__(self, N=50, max_chat_length=20, fsm_size=4, num_tokens=2):
         """ Create a CC model with given parameters
 
         Args:
@@ -294,18 +293,69 @@ class CommunicationModel(Model):
             agent.reset()
 
 if __name__ == '__main__':
-    communicationModel = CommunicationModel(50, 10, 4, 4)
-    for i in tqdm(range(1000)):
-        # logging.debug('Generation Number {}'.format(i))
-        communicationModel.step()
 
-    # Plot proportion of mutual cooperative games
-    plt.subplot(2, 1, 1)
-    plt.plot(communicationModel.total_proportions_cooperate)
-    plt.title('Proportion of cooperate / defect')
+    fsm_sizes = range(2, 8)
+    token_exps = range(2, 8)
 
-    # Plot average chat length for each game
-    plt.subplot(2, 1, 2)
-    plt.plot(communicationModel.total_chats)
-    plt.title('Chats')
+    for fsm_size in fsm_sizes:
+        for num_tokens in token_exps:
+            communicationModel = CommunicationModel(fsm_size=fsm_size, num_tokens=num_tokens)
+            print("Running model... fsm_size: {}, num_tokens: {}".format(fsm_size, num_tokens))
+            for i in tqdm(range(5000)):
+                communicationModel.step()
+
+            fig = plt.figure()
+            fig.suptitle("Cooperation Emergence - {} States, {} Tokens".format(fsm_size, num_tokens), fontsize=14, fontweight='bold')
+
+            # Plot proportion of mutual cooperative games
+            coop_ax = fig.add_subplot(211)
+            coop_ax.plot(communicationModel.total_proportions_cooperate)
+            coop_ax.set_title('Proportion of Mutually Cooperative Games')
+            coop_ax.set_xlabel('Generation')
+            coop_ax.set_ylabel('Proportion of MutualCoop Games')
+
+            # Plot average chat length for each game
+            chat_ax = fig.add_subplot(212)
+            chat_ax.plot(communicationModel.total_chats)
+            chat_ax.set_title('Average Chat Length')
+            chat_ax.set_xlabel('Generation')
+            chat_ax.set_ylabel('Average Chat Length (Tokens)')
     plt.show()
+
+    # communicationModel = CommunicationModel(fsm_size=fsm_size, num_tokens=num_tokens)
+    # print("Running model... fsm_size: {}, num_tokens: {}".format(fsm_size, num_tokens))
+    # for i in tqdm(range(100)):
+    #     communicationModel.step()
+
+    # fig = plt.figure()
+    # fig.suptitle("Cooperation Emergence - {} States, {} Tokens".format(fsm_size, num_tokens), fontsize=14, fontweight='bold')
+
+    # # Plot proportion of mutual cooperative games
+    # coop_ax = fig.add_subplot(211)
+    # coop_ax.plot(communicationModel.total_proportions_cooperate)
+    # coop_ax.set_title('Proportion of Mutually Cooperative Games')
+    # coop_ax.set_xlabel('Generation')
+    # coop_ax.set_ylabel('Proportion of MutualCoop Games')
+
+    # # Plot average chat length for each game
+    # chat_ax = fig.add_subplot(212)
+    # chat_ax.plot(communicationModel.total_chats)
+    # chat_ax.set_title('Average Chat Length')
+    # chat_ax.set_xlabel('Generation')
+    # chat_ax.set_ylabel('Average Chat Length (Tokens)')
+
+    # communicationModel = CommunicationModel(N=50, fsm_size=4, num_tokens=2)
+    # for i in tqdm(range(5000)):
+    #     # logging.debug('Generation Number {}'.format(i))
+    #     communicationModel.step()
+
+    # # Plot proportion of mutual cooperative games
+    # plt.subplot(2, 1, 1)
+    # plt.plot(communicationModel.total_proportions_cooperate)
+    # plt.title('Proportion of cooperate / defect')
+
+    # # Plot average chat length for each game
+    # plt.subplot(2, 1, 2)
+    # plt.plot(communicationModel.total_chats)
+    # plt.title('Chats')
+    # plt.show()
