@@ -2,17 +2,16 @@
 
 __author__      = "Patrick Huston, Meg McCauley, Andrew Pan"
 
-
 import random, copy, itertools
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 from mesa import Agent, Model
-import logging
+# import logging
 
-logging.basicConfig(filename='output.log',level=logging.DEBUG)
-with open('output.log', 'w'):
-    pass
+# logging.basicConfig(filename='output.log',level=logging.DEBUG)
+# with open('output.log', 'w'):
+#     pass
 
 # Final actions
 COOPERATE = -1
@@ -53,7 +52,7 @@ class CommunicationAgent(Agent):
         self.action_map = {}
         for state in range(fsm_size):
             flip = random.random()
-            if (flip < 0.5):
+            if (flip < 0.5 or state == 0):
                 # .5 probability of choosing a token to send
                 self.action_map[state] = random.randint(1, num_tokens-1)
             else: 
@@ -97,7 +96,7 @@ class CommunicationAgent(Agent):
             token (int): token sent by opponent
         """
 
-        if (self.decision != NO_ACTION):
+        if (self.decision != COOPERATE and self.decision != DEFECT):
             self.set_state(self.transition_table[(self.state, token)])
     
     def reset(self):
@@ -122,7 +121,7 @@ class CommunicationModel(Model):
     Represents agent-based model investigated in 'Communication and Cooperation' - Miller, et. al
     """
     
-    def __init__(self, N, max_chat_length, fsm_size, num_tokens):
+    def __init__(self, N=50, max_chat_length=20, fsm_size=4, num_tokens=2):
         """ Create a CC model with given parameters
 
         Args:
@@ -190,19 +189,19 @@ class CommunicationModel(Model):
         Fitter of 2 agents selected has a 50% chance of mutation to either its action map or transition table
         """
         
-        logging.debug("GENERATING_POPULATION")
+        # logging.debug("GENERATING_POPULATION")
         
         new_population = []
         for i in range(self.num_agents):
 
-            logging.debug("Begin-Selection {}".format(i))
+            # logging.debug("Begin-Selection {}".format(i))
             agent1, agent2 = random.sample(self.agents, 2)
-            logging.debug("Agent1 ID:    {}   Agent2 ID:    {}".format(agent1.unique_id, agent2.unique_id))
-            logging.debug("Agent1 Score: {}   Agent2 Score: {}".format(np.mean(agent1.scores), np.mean(agent2.scores)))
+            # logging.debug("Agent1 ID:    {}   Agent2 ID:    {}".format(agent1.unique_id, agent2.unique_id))
+            # logging.debug("Agent1 Score: {}   Agent2 Score: {}".format(np.mean(agent1.scores), np.mean(agent2.scores)))
 
             better_agent = agent1 if np.mean(agent1.scores) > np.mean(agent2.scores) else agent2
             
-            logging.debug("Winning Agent: {}".format(better_agent.unique_id))
+            # logging.debug("Winning Agent: {}".format(better_agent.unique_id))
 
 
             # Copy automata elements from better agent
@@ -214,27 +213,28 @@ class CommunicationModel(Model):
 
             if mutate_flip: # roll for whether or not to mutate
                 if mutate_action: # roll for mutation type (change action map vs transition table)
-                    if random.random() < .5: # Roll for how to set new action map value
-                        new_action_map[random.randrange(self.fsm_size)] = random.randint(1, self.num_tokens - 1)
+                    stateChoice = random.randrange(self.fsm_size)
+                    if random.random() < .5 or stateChoice == 0: # Roll for how to set new action map value
+                        new_action_map[stateChoice] = random.randint(1, self.num_tokens - 1)
                     else: 
-                        new_action_map[random.randrange(self.fsm_size)] = random.choice([COOPERATE, DEFECT])
+                        new_action_map[stateChoice] = random.choice([COOPERATE, DEFECT])
                 else:
                     new_transition_table[random.choice(list(new_transition_table.keys()))] = random.randrange(self.fsm_size)
             
             # Create new agent with better properties and set attributes
-            logging.debug('New Agent Transition Table: {}'.format(new_transition_table))
-            logging.debug('New Agent Action Map: {}'.format(new_action_map))
+            # logging.debug('New Agent Transition Table: {}'.format(new_transition_table))
+            # logging.debug('New Agent Action Map: {}'.format(new_action_map))
             new_agent = CommunicationAgent(i, self, self.fsm_size, self.num_tokens)
             new_agent.transition_table = new_transition_table
             new_agent.action_map = new_action_map
 
             new_population.append(new_agent)
-            logging.debug("End-Selection {}\n".format(i))
+            # logging.debug("End-Selection {}\n".format(i))
 
 
         self.agents = new_population
         
-        logging.debug("END_GENERATION\n")
+        # logging.debug("END_GENERATION\n")
 
     def play(self, agent1, agent2):
         """ Plays two agents against each other in a single-shot prisoner's dilemma
@@ -245,7 +245,15 @@ class CommunicationModel(Model):
         """
 
         chat_length = 0
-        logging.debug('COMMUNICATION START')
+        agent1.state = 0
+        agent1.decision = NO_ACTION
+        agent2.state = 0
+        agent2.decision = NO_ACTION
+        # logging.debug('COMMUNICATION START')
+        # logging.debug('Agent1 Transition Table: {}'.format(agent1.transition_table))
+        # logging.debug('Agent1 Action Map: {}\n'.format(agent1.action_map))
+        # logging.debug('Agent2 Transition Table: {}'.format(agent2.transition_table))
+        # logging.debug('Agent2 Action Map: {}\n'.format(agent2.action_map))
         while chat_length < self.max_chat_length:
 
             # Choose actions for agent1 and agent2
@@ -254,15 +262,16 @@ class CommunicationModel(Model):
             
             # Both agents have decided - break
             if (agent1_token == 0 and agent2_token == 0):
+                # logging.debug('Communication Finished\nAgent1 State: {} | Agent2 State: {}'.format(agent1.state, agent2.state))
                 break
             
+            # logging.debug('Agent1 State: {} Token Sent: {}   |   Agent2 State: {}  Token Sent: {}'.format(agent1.state, agent1_token, agent2.state, agent2_token))
             # Agents handle tokens 
             agent1.handle_token(agent2_token)
             agent2.handle_token(agent1_token)
-            logging.debug('Agent1 State: {} Token Sent: {}   |   Agent2 State: {}  Token Sent: {}'.format(agent1.state, agent1_token, agent2.state, agent2_token))
             chat_length += 1
-        logging.debug('Chat length: {}'.format(chat_length))
-        logging.debug('END COMMUNICATION\n')
+        # logging.debug('Chat length: {}'.format(chat_length))
+        # logging.debug('END COMMUNICATION\n')
         self.single_gen_chats.append(chat_length)
 
         # Compute scores using payout dictionaryff
@@ -284,18 +293,69 @@ class CommunicationModel(Model):
             agent.reset()
 
 if __name__ == '__main__':
-    communicationModel = CommunicationModel(50, 10, 4, 4)
-    for i in tqdm(range(100)):
-        logging.debug('Generation Number {}'.format(i))
-        communicationModel.step()
 
-    # Plot proportion of mutual cooperative games
-    plt.subplot(2, 1, 1)
-    plt.plot(communicationModel.total_proportions_cooperate)
-    plt.title('Proportion of cooperate / defect')
+    fsm_sizes = range(2, 8)
+    token_exps = range(2, 8)
 
-    # Plot average chat length for each game
-    plt.subplot(2, 1, 2)
-    plt.plot(communicationModel.total_chats)
-    plt.title('Chats')
+    for fsm_size in fsm_sizes:
+        for num_tokens in token_exps:
+            communicationModel = CommunicationModel(fsm_size=fsm_size, num_tokens=num_tokens)
+            print("Running model... fsm_size: {}, num_tokens: {}".format(fsm_size, num_tokens))
+            for i in tqdm(range(5000)):
+                communicationModel.step()
+
+            fig = plt.figure()
+            fig.suptitle("Cooperation Emergence - {} States, {} Tokens".format(fsm_size, num_tokens), fontsize=14, fontweight='bold')
+
+            # Plot proportion of mutual cooperative games
+            coop_ax = fig.add_subplot(211)
+            coop_ax.plot(communicationModel.total_proportions_cooperate)
+            coop_ax.set_title('Proportion of Mutually Cooperative Games')
+            coop_ax.set_xlabel('Generation')
+            coop_ax.set_ylabel('Proportion of MutualCoop Games')
+
+            # Plot average chat length for each game
+            chat_ax = fig.add_subplot(212)
+            chat_ax.plot(communicationModel.total_chats)
+            chat_ax.set_title('Average Chat Length')
+            chat_ax.set_xlabel('Generation')
+            chat_ax.set_ylabel('Average Chat Length (Tokens)')
     plt.show()
+
+    # communicationModel = CommunicationModel(fsm_size=fsm_size, num_tokens=num_tokens)
+    # print("Running model... fsm_size: {}, num_tokens: {}".format(fsm_size, num_tokens))
+    # for i in tqdm(range(100)):
+    #     communicationModel.step()
+
+    # fig = plt.figure()
+    # fig.suptitle("Cooperation Emergence - {} States, {} Tokens".format(fsm_size, num_tokens), fontsize=14, fontweight='bold')
+
+    # # Plot proportion of mutual cooperative games
+    # coop_ax = fig.add_subplot(211)
+    # coop_ax.plot(communicationModel.total_proportions_cooperate)
+    # coop_ax.set_title('Proportion of Mutually Cooperative Games')
+    # coop_ax.set_xlabel('Generation')
+    # coop_ax.set_ylabel('Proportion of MutualCoop Games')
+
+    # # Plot average chat length for each game
+    # chat_ax = fig.add_subplot(212)
+    # chat_ax.plot(communicationModel.total_chats)
+    # chat_ax.set_title('Average Chat Length')
+    # chat_ax.set_xlabel('Generation')
+    # chat_ax.set_ylabel('Average Chat Length (Tokens)')
+
+    # communicationModel = CommunicationModel(N=50, fsm_size=4, num_tokens=2)
+    # for i in tqdm(range(5000)):
+    #     # logging.debug('Generation Number {}'.format(i))
+    #     communicationModel.step()
+
+    # # Plot proportion of mutual cooperative games
+    # plt.subplot(2, 1, 1)
+    # plt.plot(communicationModel.total_proportions_cooperate)
+    # plt.title('Proportion of cooperate / defect')
+
+    # # Plot average chat length for each game
+    # plt.subplot(2, 1, 2)
+    # plt.plot(communicationModel.total_chats)
+    # plt.title('Chats')
+    # plt.show()
