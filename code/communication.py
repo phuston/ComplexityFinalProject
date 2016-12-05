@@ -297,12 +297,18 @@ if __name__ == '__main__':
     fsm_sizes = range(2, 8)
     token_exps = range(2, 8)
 
+    cooperative_gens = {}
+    for i in range(2, 8):
+        for j in range(2, 8):
+            cooperative_gens[(i, j)] = 0
     for fsm_size in fsm_sizes:
         for num_tokens in token_exps:
             communicationModel = CommunicationModel(fsm_size=fsm_size, num_tokens=num_tokens)
             print("Running model... fsm_size: {}, num_tokens: {}".format(fsm_size, num_tokens))
-            for i in tqdm(range(5000)):
+            for i in tqdm(range(20000)):
                 communicationModel.step()
+                if communicationModel.total_proportions_cooperate[-1] > .3 and i > 100:
+                    cooperative_gens[(fsm_size, num_tokens)] += 1
 
             fig = plt.figure()
             fig.suptitle("Cooperation Emergence - {} States, {} Tokens".format(fsm_size, num_tokens), fontsize=14, fontweight='bold')
@@ -320,6 +326,25 @@ if __name__ == '__main__':
             chat_ax.set_title('Average Chat Length')
             chat_ax.set_xlabel('Generation')
             chat_ax.set_ylabel('Average Chat Length (Tokens)')
+    plt.show()
+
+    cooperative_gens_states = [cooperative_gens[(state, 4)] for state in range(2, 8)]
+    cooperative_gens_tokens = [cooperative_gens[(4, tokens)] for tokens in range(2, 8)]
+
+    generations_fig = plt.figure()
+    generations_fig.suptitle('Cooperative Generations with Varying Automata States and Token Counts')
+
+    generations_states = generations_fig.add_subplot(211)
+    generations_states.plot(range(2, 8), cooperative_gens_states)
+    generation_states.set_xlabel('Automata State Size')
+    generation_states.set_ylabel('Number of Cooperative Generations')
+    generations_states.plot()
+
+    generations_tokens = generations_fig.add_subplot(212)
+    generations_tokens.plot(range(2, 8), cooperative_gens_tokens)
+    generations_tokens.set_xlabel('Number of Tokens')
+    generations_tokens.set_ylabel('Number of Cooperative Generations')
+    generations_tokens.plot()
     plt.show()
 
     # communicationModel = CommunicationModel(fsm_size=fsm_size, num_tokens=num_tokens)
