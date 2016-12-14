@@ -86,7 +86,7 @@ The amount of communication and cooperation increases as we allow more states an
 As an extension to the work done by Miller et. al, we further investigate the process by which agents move from one generation to the next in order to explore how to create higher levels of cooperation between agents. To do this, we ran the model while varying the mutation rate parameter used to determine the chance that the “better agent” selected mutates before being placed into the new population. Using the same standard setup of four automaton states and two communication tokens, we ran a sweep of the mutation rate from 0 to 0.7 with a step size of 0.1. We ran each experiment for 100,000 generations to smooth out irregularities, computed the average number of cooperative generations per 1,000 generations for each mutation rate, and plotted the two against each other. This graph is seen here: 
 
 
-![Cooperation as a function of mutation2](https://github.com/phuston/ComplexityFinalProject/blob/master/graphs/cooperationvsmutation.png"Cooperation as a function of mutation")
+![Cooperation as a function of mutation graph 2](https://github.com/phuston/ComplexityFinalProject/blob/master/graphs/cooperationvsmutation.png "Cooperation as a function of mutation")
 
 
 *Figure 5: Cooperation as a function of agent mutation rate*
