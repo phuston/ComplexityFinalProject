@@ -570,18 +570,18 @@ if __name__ == '__main__':
     # chat_ax.set_xlabel('Generation')
     # chat_ax.set_ylabel('Average Chat Length (Tokens)')
 
-    turingModel = TuringModel(N=50, tape_states=4, num_tokens=4)
-    for i in tqdm(range(1000)):
-    #     # logging.debug('Generation Number {}'.format(i))
-        turingModel.step()
+    # turingModel = TuringModel(N=50, tape_states=4, num_tokens=4)
+    # for i in tqdm(range(1000)):
+    # #     # logging.debug('Generation Number {}'.format(i))
+    #     turingModel.step()
 
-    # Plot proportion of mutual cooperative games
-    plt.subplot(2, 1, 1)
-    plt.plot(turingModel.total_proportions_cooperate)
-    plt.title('Proportion of cooperate / defect')
+    # # Plot proportion of mutual cooperative games
+    # plt.subplot(2, 1, 1)
+    # plt.plot(turingModel.total_proportions_cooperate)
+    # plt.title('Proportion of cooperate / defect')
 
-    # Plot average chat length for each game
-    plt.subplot(2, 1, 2)
-    plt.plot(turingModel.total_chats)
-    plt.title('Chats')
-    plt.show()
+    # # Plot average chat length for each game
+    # plt.subplot(2, 1, 2)
+    # plt.plot(turingModel.total_chats)
+    # plt.title('Chats')
+    # plt.show()
