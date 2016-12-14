@@ -129,18 +129,16 @@ class TuringAgent(CommunicationAgent):
 
     def genRuleTable(self, agent_states, num_tokens):
         self.rule_table = {} # keys will be current state and token being read, mapping to what to write to the tape, where to move, and what to change current state to
-        state_token_pairs = itertools.product(range(agent_states, range(num_tokens)))
+        state_token_pairs = itertools.product(range(agent_states), range(num_tokens))
         for state_token_pair in state_token_pairs:
             change_state = (COOPERATE if random.random() < .5 else DEFECT) if random.random() < .3 else random.randrange(agent_states) # roll to either change states to C/D or another state
-            self.rule_table[state_token_pair] = (random.randrange(agent_states), random.choice([-1, 0, 1], change_state)) # each tuple in the dictionary is (token to write to tape, move l/r or stay put, state to change to)
+            self.rule_table[state_token_pair] = (random.randrange(agent_states), random.choice([-1, 0, 1]), change_state) # each tuple in the dictionary is (token to write to tape, move l/r or stay put, state to change to)
 
     def genActionMap(self, num_tokens):
         self.action_map = {-2: 0, -1: 0}
         for state in range(self.tape_states): #create map from all states to tokens to send
-            self.action_map[state] = random.randint(1, num_tokens)
+            self.action_map[state] = random.randint(1, num_tokens - 1)
 
-    def choose_action(self):
-        #todo: 
 class CommunicationModel(Model):
     """ 
     Represents agent-based model investigated in 'Communication and Cooperation' - Miller, et. al
@@ -318,14 +316,14 @@ class CommunicationModel(Model):
             agent.reset()
 
 class TuringModel(CommunicationModel):
-    def __init__(self, N=50, max_chat_length=20, tape_states=4, num_tokens=2, tape_length = 10):
+    def __init__(self, N=50, max_chat_length=20, tape_states=4, num_tokens=4, tape_length = 10):
         """ Create a CC model with given parameters
 
         Args:
             N (int): number of agents in the model
             max_chat_length (int): Maximum number of communications allowed
-            fsm_size (int): Number of states in agents' automata
-            num_tokens (int): Number of communication tokens allowed
+            fsm_size (int): Number of states in agents' tape
+            num_tokens (int): Number of communication tokens allowed, including the null token
         """
         
         self.num_agents = N
@@ -360,14 +358,14 @@ class TuringModel(CommunicationModel):
             new_action_map = copy.deepcopy(better_agent.action_map)
             
             mutate_flip = random.random() < 0.5 # Roll for mutation
-            mutate_action = random.choice([1, 2, 3]) # Roll for mutation type
+            mutate_action = random.random() < 0.5 # Roll for mutation type
 
             if mutate_flip: # roll for whether or not to mutate
                 if mutate_action:
-                    new_action_map[random.randrange(self.tape_states)] = random.randint(1, self.num_tokens)
+                    new_action_map[random.randrange(self.tape_states)] = random.randint(1, self.num_tokens - 1)
                 else:
                     change_state = (COOPERATE if random.random() < .5 else DEFECT) if random.random() < .3 else random.randrange(self.tape_states) # roll to either change states to C/D or another state
-                    new_rule_table[(random.randrange(self.tape_states), random.randrange(self.num_tokens))] = (random.randrange(self.tape_states), random.choice([-1, 0, 1], change_state))
+                    new_rule_table[(random.randrange(self.tape_states), random.randrange(self.num_tokens))] = (random.randrange(self.tape_states), random.choice([-1, 0, 1]), change_state)
 
             
             # Create new agent with better properties and set attributes
@@ -402,43 +400,51 @@ class TuringModel(CommunicationModel):
             # have to determine how to handle both agents trying to edit the same position on the tape at the same time
             # have to handle agents trying to move left or right off the edge of the turing tape, either prevent their movement or wrap around the ends of the tape - done, wrapped
             # of course, stop agents if both tokens sent are 0
-            agent1_token = agent1.action_map[self.tape[agent1_pos]] # agents' tokens are found in the action map, based on the tape input at the agents' position
-            agent2_token = agent2.action_map[self.tape[agent2_pos]]
+            agent1_token = agent1.action_map[self.tape[agent1_pos]] if agent1.decision == NO_ACTION else 0 # agents' tokens are found in the action map, based on the tape input at the agents' position
+            agent2_token = agent2.action_map[self.tape[agent2_pos]] if agent2.decision == NO_ACTION else 0
 
             if agent1_token == 0 and agent2_token == 0: # end the run if both tokens are 0
                 break
 
-            tape_state1, move1, change_state1 = agent1.rule_table[(agent1.state, agent2_token)] # pass agent current state and token from other agent into agent's rule table
-            tape_state2, move2, change_state2 = agent2.rule_table[(agent2.state, agent1_token)]
+            if agent1.decision == NO_ACTION:
+                tape_state1, move1, change_state1 = agent1.rule_table[(agent1.state, agent2_token)] # pass agent current state and token from other agent into agent's rule table
 
-            tape[agent1_pos] = tape_state1 # agents writing to tape
-            tape[agent2_pos] = tape_state2
+                self.tape[agent1_pos] = tape_state1 # agents writing to tape
 
-            agent1_pos += move1 # agents move their position, either -1, 0, or 1
-            agent2_pos += move2
+                agent1_pos += move1 # agents move their position, either -1, 0, or 1
 
-            agent1.state = change_state1 # agents then change state
-            agent2.state = change_state2
+                agent1.state = change_state1 # agents then change state
 
-            if agent1.state == COOPERATE:
-                agent1.decision = COOPERATE
-            elif agent1.state == DEFECT:
-                agent1.decision = DEFECT
+                if agent1.state == COOPERATE:
+                    agent1.decision = COOPERATE
+                elif agent1.state == DEFECT:
+                    agent1.decision = DEFECT
 
-            if agent2.state == COOPERATE:
-                agent2.decision = COOPERATE
-            elif agent2.state == DEFECT:
-                agent2.decision = DEFECT
+                if agent1_pos < 0: # ensuring that agent position remains on the tape, wrapping around the ends
+                    agent1_pos = self.tape_length - 1
+                elif agent1_pos >= self.tape_length:
+                    agent1_pos = 0
 
-            if agent1_pos < 0: # ensuring that agent position remains on the tape, wrapping around the ends
-                agent1_pos = tape_length - 1
-            elif agent1_pos >= self.tape_length:
-                agent1_pos = 0
+            if agent2.decision == NO_ACTION:
+                tape_state2, move2, change_state2 = agent2.rule_table[(agent2.state, agent1_token)]
+                 
+                self.tape[agent2_pos] = tape_state2
 
-            if agent2_pos < 0:
-                agent2_pos = tape_length - 1
-            elif agent2_pos >= self.tape_length:
-                agent2_pos = 0
+                agent2_pos += move2
+
+                agent2.state = change_state2
+
+                if agent2.state == COOPERATE:
+                    agent2.decision = COOPERATE
+                elif agent2.state == DEFECT:
+                    agent2.decision = DEFECT
+
+                if agent2_pos < 0:
+                    agent2_pos = self.tape_length - 1
+                elif agent2_pos >= self.tape_length:
+                    agent2_pos = 0
+
+            chat_length += 1
 
            
 
@@ -462,6 +468,33 @@ class TuringModel(CommunicationModel):
 
 if __name__ == '__main__':
 
+    fsm_sizes = range(2, 8)
+    token_exps = range(2, 8)
+
+    for fsm_size in fsm_sizes:
+        for num_tokens in token_exps:
+            turingModel = TuringModel(tape_states=fsm_size, num_tokens=num_tokens)
+            print("Running model... fsm_size: {}, num_tokens: {}".format(fsm_size, num_tokens))
+            for i in tqdm(range(1000)):
+                turingModel.step()
+
+            fig = plt.figure()
+            fig.suptitle("Cooperation Emergence - {} States, {} Tokens".format(fsm_size, num_tokens), fontsize=14, fontweight='bold')
+
+            # Plot proportion of mutual cooperative games
+            coop_ax = fig.add_subplot(211)
+            coop_ax.plot(turingModel.total_proportions_cooperate)
+            coop_ax.set_title('Proportion of Mutually Cooperative Games')
+            coop_ax.set_xlabel('Generation')
+            coop_ax.set_ylabel('Proportion of MutualCoop Games')
+
+            # Plot average chat length for each game
+            chat_ax = fig.add_subplot(212)
+            chat_ax.plot(turingModel.total_chats)
+            chat_ax.set_title('Average Chat Length')
+            chat_ax.set_xlabel('Generation')
+            chat_ax.set_ylabel('Average Chat Length (Tokens)')
+    plt.show()
     # fsm_sizes = range(2, 8)
     # token_exps = range(2, 8)
 
@@ -537,18 +570,18 @@ if __name__ == '__main__':
     # chat_ax.set_xlabel('Generation')
     # chat_ax.set_ylabel('Average Chat Length (Tokens)')
 
-    communicationModel = CommunicationModel(N=50, fsm_size=4, num_tokens=2)
-    for i in tqdm(range(5000)):
+    turingModel = TuringModel(N=50, tape_states=4, num_tokens=4)
+    for i in tqdm(range(1000)):
     #     # logging.debug('Generation Number {}'.format(i))
-        communicationModel.step()
+        turingModel.step()
 
     # Plot proportion of mutual cooperative games
     plt.subplot(2, 1, 1)
-    plt.plot(communicationModel.total_proportions_cooperate)
+    plt.plot(turingModel.total_proportions_cooperate)
     plt.title('Proportion of cooperate / defect')
 
     # Plot average chat length for each game
     plt.subplot(2, 1, 2)
-    plt.plot(communicationModel.total_chats)
+    plt.plot(turingModel.total_chats)
     plt.title('Chats')
     plt.show()
