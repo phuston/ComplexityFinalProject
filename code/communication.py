@@ -420,6 +420,16 @@ class TuringModel(CommunicationModel):
             agent1.state = change_state1 # agents then change state
             agent2.state = change_state2
 
+            if agent1.state == COOPERATE:
+                agent1.decision = COOPERATE
+            elif agent1.state == DEFECT:
+                agent1.decision = DEFECT
+
+            if agent2.state == COOPERATE:
+                agent2.decision = COOPERATE
+            elif agent2.state == DEFECT:
+                agent2.decision = DEFECT
+
             if agent1_pos < 0: # ensuring that agent position remains on the tape, wrapping around the ends
                 agent1_pos = tape_length - 1
             elif agent1_pos >= self.tape_length:
@@ -430,21 +440,8 @@ class TuringModel(CommunicationModel):
             elif agent2_pos >= self.tape_length:
                 agent2_pos = 0
 
+           
 
-            # # Choose actions for agent1 and agent2
-            # agent1_token = agent1.choose_action()
-            # agent2_token = agent2.choose_action()
-            
-            # # Both agents have decided - break
-            # if (agent1_token == 0 and agent2_token == 0):
-            #     # logging.debug('Communication Finished\nAgent1 State: {} | Agent2 State: {}'.format(agent1.state, agent2.state))
-            #     break
-            
-            # # logging.debug('Agent1 State: {} Token Sent: {}   |   Agent2 State: {}  Token Sent: {}'.format(agent1.state, agent1_token, agent2.state, agent2_token))
-            # # Agents handle tokens 
-            # agent1.handle_token(agent2_token)
-            # agent2.handle_token(agent1_token)
-            # chat_length += 1
         # logging.debug('Chat length: {}'.format(chat_length))
         # logging.debug('END COMMUNICATION\n')
         self.single_gen_chats.append(chat_length)
