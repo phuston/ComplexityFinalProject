@@ -116,7 +116,7 @@ class CommunicationModel(Model):
     Represents agent-based model investigated in 'Communication and Cooperation' - Miller, et. al
     """
     
-    def __init__(self, N=50, max_chat_length=20, fsm_size=4, num_tokens=2, mutation_rate=0.5):
+    def __init__(self, N=50, max_chat_length=20, fsm_size=4, num_tokens=2, mutation_rate=0.5, num_agents_compared=2):
         """ Create a CC model with given parameters
 
         Args:
@@ -131,6 +131,7 @@ class CommunicationModel(Model):
         self.fsm_size = fsm_size
         self.num_tokens = num_tokens
         self.mutation_rate = mutation_rate
+        self.num_agents_compared = num_agents_compared
         
         self.total_cooperations = []
         self.total_defections = []
@@ -185,16 +186,19 @@ class CommunicationModel(Model):
         Fitter of 2 agents selected has a 50% chance of mutation to either its action map or transition table
         """
         
-        # logging.debug("GENERATING_POPULATION")
-        
         new_population = []
+        agents_list = []
+        high_score = 0
         for i in range(self.num_agents):
 
-            agent1, agent2 = random.sample(self.agents, 2)
+            agents_list = random.sample(self.agents, self.num_agents_compared)
 
-            better_agent = agent1 if np.mean(agent1.scores) > np.mean(agent2.scores) else agent2
-            
-
+            # better_agent = agent1 if np.mean(agent1.scores) > np.mean(agent2.scores) else agent2
+            for each_agent in agents_list:
+                if np.mean(each_agent.scores) > high_score:
+                    better_agent = each_agent
+                else:
+                    better_agent = agents_list[0]       ## pretty lame way of making sure at least one agent is the "best"
 
             # Copy automata elements from better agent
             new_action_map = copy.deepcopy(better_agent.action_map)
@@ -270,16 +274,15 @@ class CommunicationModel(Model):
         for agent in self.agents:
             agent.reset()
 
-if __name__ == '__main__':
-
+def sweep_mutation(iterations):
     # Run sweep of mutation rates
-    mutation_rates = np.arange(0,1,0.1)
+    mutation_rates = np.arange(0,0.5,0.1)
     cooperative_gens_counts = []
 
     for mutation_rate in mutation_rates:
         communicationModel = CommunicationModel(mutation_rate=mutation_rate)
         num_cooperative_gens = 0
-        for i in tqdm(range(100)):
+        for i in tqdm(range(iterations)):
             communicationModel.step()
             if communicationModel.total_proportions_cooperate[-1] > .1 and i > 100:
                 num_cooperative_gens += 1
@@ -294,6 +297,32 @@ if __name__ == '__main__':
     axis.set_ylabel('Rate of Cooperative Generations per 1000 Generations')
     plt.show()
 
+def sweep_agent_comparison(iterations):
+    # Run sweep of number of agents compared
+    num_agents_compared = np.arange(2,3,1)
+    cooperative_gens_counts = []
+
+    for num_agents in num_agents_compared:
+        communicationModel = CommunicationModel(num_agents_compared=num_agents)
+        num_cooperative_gens = 0
+        for i in tqdm(range(iterations)):
+            communicationModel.step()
+            if communicationModel.total_proportions_cooperate[-1] > .1 and i > 100:
+                num_cooperative_gens += 1
+        cooperative_gens_counts.append(num_cooperative_gens)
+
+    fig = plt.figure()
+    fig.suptitle("Level of Cooperation vs. Number of Agents Compared", fontsize=14, fontweight='bold')
+
+    axis = fig.add_subplot(111)
+    axis.plot(num_agents_compared, cooperative_gens_counts)
+    axis.set_xlabel('Number of Agents Compared')
+    axis.set_ylabel('Rate of Cooperative Generations per 1000 Generations')
+    plt.show()
+
+if __name__ == '__main__':
+    # sweep_mutation(5000)
+    sweep_agent_comparison(1000)
 
     # fsm_sizes = range(2, 8)
     # token_exps = range(2, 8)
